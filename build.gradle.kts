@@ -1,8 +1,11 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     `maven-publish`
     id("fabric-loom")
     //id("dev.kikugie.j52j")
     id("me.modmuss50.mod-publish-plugin")
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 class ModData {
@@ -11,7 +14,7 @@ class ModData {
     val title = property("mod.mc_title").toString()
     val version = property("mod.version").toString()
     val group = property("mod.group").toString()
-    val publish = property("mod.publish").toString().toBoolean() && mod.id != "template"
+    val publish = property("mod.publish").toString().toBoolean() && id != "template"
     val mcDep = property("mod.mc_dep").toString()
 }
 
@@ -76,6 +79,32 @@ dependencies {
     if (dev.checkSpecified("modmenu"))
         modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
 }
+
+//region Shadow libraries
+
+/**
+ * Example:
+ * shadowLibrary("de.maxhenkel.configbuilder:configbuilder:${deps["henkel_config"]}")
+ */
+val shadowLibrary: Configuration by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+tasks.named<ShadowJar>("shadowJar") {
+    configurations = listOf(shadowLibrary)
+    archiveClassifier = "dev-shadow"
+    // Relocate stuff here:
+    // relocate("de.maxhenkel.admiral", "com.scubakay.autorelog.admiral")
+}
+
+tasks {
+    remapJar {
+        inputFile = shadowJar.get().archiveFile
+    }
+}
+
+//endregion
 
 loom {
     decompilers {
