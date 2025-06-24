@@ -1,4 +1,4 @@
-package com.example;
+package com.scubakay;
 
 import net.fabricmc.api.ClientModInitializer;
 

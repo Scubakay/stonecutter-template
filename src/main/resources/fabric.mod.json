@@ -3,29 +3,37 @@
   "id": "${id}",
   "version": "${version}",
   "name": "${name}",
-  "description": "This is an example description! Tell everyone what your mod is about!",
+  "description": "${description}",
   "authors": [
-    "Me!"
+    "Scubakay"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "homepage": "${homepage}",
+    "sources": "${repository}",
+    "issues": "${repository}/issues"
   },
-  "license": "CC0-1.0",
-  "icon": "assets/template/icon.png",
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://discord.gg/t8AYBrmqbD"
+      }
+    }
+  },
+  "license": "MIT",
+  "icon": "assets/${id}/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.example.TemplateMod"
+      "com.scubakay.TemplateMod"
     ],
     "client": [
-      "com.example.TemplateModClient"
+      "com.scubakay.TemplateModClient"
     ]
   },
   "mixins": [
-    "template.mixins.json",
+    "mod.mixins.json",
     {
-      "config": "template.client.mixins.json",
+      "config": "mod.client.mixins.json",
       "environment": "client"
     }
   ],

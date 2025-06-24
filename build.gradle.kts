@@ -8,14 +8,39 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
+//region Shadow libraries
+
+/**
+ * Example:
+ * shadowAndRelocate("de.maxhenkel.configbuilder:configbuilder:${deps["henkel_config"]}", "de.maxhenkel.admiral", "com.scubakay.autorelog.admiral")
+ */
+val shadowLibrary = configurations.create("shadowLibrary") {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+val shadowRelocations = mutableListOf<Pair<String, String>>()
+
+fun shadowAndRelocate(dependencyNotation: String, fromPackage: String, toPackage: String) {
+    dependencies.add("shadowLibrary", dependencyNotation)
+    shadowRelocations.add(fromPackage to toPackage)
+}
+
+//endregion
+
 class ModData {
-    val id = property("mod.id").toString()
-    val name = property("mod.name").toString()
-    val title = property("mod.mc_title").toString()
     val version = property("mod.version").toString()
     val group = property("mod.group").toString()
-    val publish = property("mod.publish").toString().toBoolean() && id != "template"
+    val id = property("mod.id").toString()
+    val name = property("mod.name").toString()
+    val description = property("mod.description").toString()
+    val homepage = property("mod.homepage").toString()
+    val repository = property("mod.repository").toString()
+
     val mcDep = property("mod.mc_dep").toString()
+    val title = property("mod.mc_title").toString()
+    val targets = property("mod.mc_targets").toString().split(',').map { it.trim() }
+    val publish = property("mod.publish").toString().toBoolean() && id != "template"
 }
 
 class ModDependencies(private val prefix: String) {
@@ -26,19 +51,10 @@ class ModDependencies(private val prefix: String) {
     }
 }
 
-fun modules(): Array<String> {
-    return (findProperty("deps.fabric_modules") as? String)
-        ?.split(",")
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?.toTypedArray()
-        ?: emptyArray()
-}
-
 val mod = ModData()
 val deps = ModDependencies("deps")
 val dev = ModDependencies("dev")
-val mcVersion = stonecutter.current.version
+val scVersion = stonecutter.current.version
 
 version = "${mod.version}+${mod.title}"
 group = mod.group
@@ -62,40 +78,30 @@ repositories {
     }
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
+    //strictMaven("https://maven.maxhenkel.de/repository/public", "Max Henkel")
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:$mcVersion")
-    mappings("net.fabricmc:yarn:$mcVersion+build.${deps["yarn_build"]}:v2")
+    minecraft("com.mojang:minecraft:$scVersion")
+    mappings("net.fabricmc:yarn:$scVersion+build.${deps["yarn_build"]}:v2")
     modImplementation("net.fabricmc:fabric-loader:${deps["fabric_loader"]}")
+    if(deps.checkSpecified("fabric_api"))
+        modImplementation("net.fabricmc.fabric-api:fabric-api:${deps["fabric_api"]}")
 
-    // Include Fabric api or individually specified modules
-    if(deps.checkSpecified("fabric_api")) {
-        if (deps.checkSpecified("fabric_modules"))
-            modules().forEach {modImplementation(fabricApi.module(it, deps["fabric_api"]))}
-        else modImplementation("net.fabricmc.fabric-api:fabric-api:${deps["fabric_api"]}")
-    }
+    //shadowAndRelocate("de.maxhenkel.configbuilder:configbuilder:2.0.2", "de.maxhenkel.configbuilder", "com.scubakay.autorelog.admiral")
 
     if (dev.checkSpecified("modmenu"))
         modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
 }
 
-//region Shadow libraries
-
-/**
- * Example:
- * shadowLibrary("de.maxhenkel.configbuilder:configbuilder:${deps["henkel_config"]}")
- */
-val shadowLibrary: Configuration by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
+//region Shadow tasks
 
 tasks.named<ShadowJar>("shadowJar") {
     configurations = listOf(shadowLibrary)
     archiveClassifier = "dev-shadow"
-    // Relocate stuff here:
-    // relocate("de.maxhenkel.admiral", "com.scubakay.autorelog.admiral")
+    shadowRelocations.forEach { (from, to) ->
+        relocate(from, to)
+    }
 }
 
 tasks {
@@ -122,22 +128,28 @@ loom {
 
 java {
     withSourcesJar()
-    val java = if (stonecutter.eval(mcVersion, ">=1.20.6")) JavaVersion.VERSION_21 else JavaVersion.VERSION_17
+    val java = if (stonecutter.eval(scVersion, ">=1.20.6")) JavaVersion.VERSION_21 else JavaVersion.VERSION_17
     targetCompatibility = java
     sourceCompatibility = java
 }
 
 tasks.processResources {
+    inputs.property("version", mod.version)
     inputs.property("id", mod.id)
     inputs.property("name", mod.name)
-    inputs.property("version", mod.version)
     inputs.property("mcdep", mod.mcDep)
+    inputs.property("description", mod.description)
+    inputs.property("homepage", mod.homepage)
+    inputs.property("repository", mod.repository)
 
     val map = mapOf(
+        "version" to mod.version,
         "id" to mod.id,
         "name" to mod.name,
-        "version" to mod.version,
-        "mcdep" to mod.mcDep
+        "mcdep" to mod.mcDep,
+        "description" to mod.description,
+        "homepage" to mod.homepage,
+        "repository" to mod.repository,
     )
 
     filesMatching("fabric.mod.json") { expand(map) }
@@ -166,7 +178,7 @@ publishMods {
     modrinth {
         projectId = property("publish.modrinth").toString()
         accessToken = providers.environmentVariable("MODRINTH_TOKEN")
-        minecraftVersions.add(mcVersion)
+        minecraftVersions.addAll(mod.targets)
         requires {
             slug = "fabric-api"
         }
@@ -176,7 +188,7 @@ publishMods {
 //    curseforge {
 //        projectId = property("publish.curseforge").toString()
 //        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
-//        minecraftVersions.add(mcVersion)
+//        minecraftVersions.addAll(mod.targets)
 //        requires {
 //            slug = "fabric-api"
 //        }
@@ -198,7 +210,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             groupId = "${property("mod.group")}.${mod.id}"
             artifactId = mod.version
-            version = mcVersion
+            version = scVersion
 
             from(components["java"])
         }
