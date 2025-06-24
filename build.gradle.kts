@@ -92,6 +92,7 @@ loom {
     }
 
     runConfigs.all {
+        ideConfigGenerated(true)
         vmArgs("-Dmixin.debug.export=true")
         runDir = "../../run"
     }
