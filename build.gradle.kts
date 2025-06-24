@@ -2,26 +2,42 @@ plugins {
     `maven-publish`
     id("fabric-loom")
     //id("dev.kikugie.j52j")
-    //id("me.modmuss50.mod-publish-plugin")
+    id("me.modmuss50.mod-publish-plugin")
 }
 
 class ModData {
     val id = property("mod.id").toString()
     val name = property("mod.name").toString()
+    val title = property("mod.mc_title").toString()
     val version = property("mod.version").toString()
     val group = property("mod.group").toString()
+    val publish = property("mod.publish").toString().toBoolean() && mod.id != "template"
+    val mcDep = property("mod.mc_dep").toString()
 }
 
-class ModDependencies {
-    operator fun get(name: String) = property("deps.$name").toString()
+class ModDependencies(private val prefix: String) {
+    operator fun get(name: String) = property("$prefix.$name").toString()
+    fun checkSpecified(depName: String): Boolean {
+        val property = findProperty("$prefix.$depName")
+        return property != null && property != "[VERSIONED]"
+    }
+}
+
+fun modules(): Array<String> {
+    return (findProperty("deps.fabric_modules") as? String)
+        ?.split(",")
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        ?.toTypedArray()
+        ?: emptyArray()
 }
 
 val mod = ModData()
-val deps = ModDependencies()
+val deps = ModDependencies("deps")
+val dev = ModDependencies("dev")
 val mcVersion = stonecutter.current.version
-val mcDep = property("mod.mc_dep").toString()
 
-version = "${mod.version}+$mcVersion"
+version = "${mod.version}+${mod.title}"
 group = mod.group
 base { archivesName.set(mod.id) }
 
@@ -46,18 +62,19 @@ repositories {
 }
 
 dependencies {
-    fun fapi(vararg modules: String) = modules.forEach {
-        modImplementation(fabricApi.module(it, deps["fabric_api"]))
-    }
-
     minecraft("com.mojang:minecraft:$mcVersion")
     mappings("net.fabricmc:yarn:$mcVersion+build.${deps["yarn_build"]}:v2")
     modImplementation("net.fabricmc:fabric-loader:${deps["fabric_loader"]}")
 
-    fapi(
-        // Add modules from https://github.com/FabricMC/fabric
-        "fabric-lifecycle-events-v1",
-    )
+    // Include Fabric api or individually specified modules
+    if(deps.checkSpecified("fabric_api")) {
+        if (deps.checkSpecified("fabric_modules"))
+            modules().forEach {modImplementation(fabricApi.module(it, deps["fabric_api"]))}
+        else modImplementation("net.fabricmc.fabric-api:fabric-api:${deps["fabric_api"]}")
+    }
+
+    if (dev.checkSpecified("modmenu"))
+        modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
 }
 
 loom {
@@ -85,13 +102,13 @@ tasks.processResources {
     inputs.property("id", mod.id)
     inputs.property("name", mod.name)
     inputs.property("version", mod.version)
-    inputs.property("mcdep", mcDep)
+    inputs.property("mcdep", mod.mcDep)
 
     val map = mapOf(
         "id" to mod.id,
         "name" to mod.name,
         "version" to mod.version,
-        "mcdep" to mcDep
+        "mcdep" to mod.mcDep
     )
 
     filesMatching("fabric.mod.json") { expand(map) }
@@ -104,7 +121,6 @@ tasks.register<Copy>("buildAndCollect") {
     dependsOn("build")
 }
 
-/*
 publishMods {
     file = tasks.remapJar.get().archiveFile
     additionalFiles.from(tasks.remapSourcesJar.get().archiveFile)
@@ -114,8 +130,9 @@ publishMods {
     type = STABLE
     modLoaders.add("fabric")
 
-    dryRun = providers.environmentVariable("MODRINTH_TOKEN")
-        .getOrNull() == null || providers.environmentVariable("CURSEFORGE_TOKEN").getOrNull() == null
+    dryRun = !mod.publish
+            || providers.environmentVariable("MODRINTH_TOKEN").getOrNull() == null
+            || providers.environmentVariable("CURSEFORGE_TOKEN").getOrNull() == null
 
     modrinth {
         projectId = property("publish.modrinth").toString()
@@ -135,8 +152,7 @@ publishMods {
         }
     }
 }
-*/
-/*
+
 publishing {
     repositories {
         maven("...") {
@@ -158,4 +174,3 @@ publishing {
         }
     }
 }
-*/
