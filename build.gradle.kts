@@ -124,7 +124,7 @@ tasks.register<Copy>("buildAndCollect") {
 publishMods {
     file = tasks.remapJar.get().archiveFile
     additionalFiles.from(tasks.remapSourcesJar.get().archiveFile)
-    displayName = "${mod.name} ${mod.version} for $mcVersion"
+    displayName = "${mod.name} ${mod.version} for ${mod.title}"
     version = mod.version
     changelog = rootProject.file("CHANGELOG.md").readText()
     type = STABLE
