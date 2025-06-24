@@ -92,7 +92,6 @@ loom {
     }
 
     runConfigs.all {
-        ideConfigGenerated(true)
         vmArgs("-Dmixin.debug.export=true")
         runDir = "../../run"
     }
@@ -117,7 +116,6 @@ dependencies {
     if (dev.checkSpecified("modmenu"))
         modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
 }
-
 
 //region Building
 java {
