@@ -143,14 +143,15 @@ publishMods {
         }
     }
 
-    curseforge {
-        projectId = property("publish.curseforge").toString()
-        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
-        minecraftVersions.add(mcVersion)
-        requires {
-            slug = "fabric-api"
-        }
-    }
+//    Uncomment publishing order in stonecutter.gradle.kts too if you want to publish to Curseforge
+//    curseforge {
+//        projectId = property("publish.curseforge").toString()
+//        accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
+//        minecraftVersions.add(mcVersion)
+//        requires {
+//            slug = "fabric-api"
+//        }
+//    }
 }
 
 publishing {

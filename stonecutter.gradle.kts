@@ -6,6 +6,7 @@ plugins {
 }
 stonecutter active "dev" /* [SC] DO NOT EDIT */
 
-stonecutter tasks {
+stonecutter.tasks {
     order("publishModrinth")
+    //order("publishCurseforge")
 }
