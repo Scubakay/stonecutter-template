@@ -16,8 +16,15 @@ stonecutter {
     centralScript = "build.gradle.kts"
 
     shared {
+        // Helper function to declare vers for a Minecraft version and multiple loaders
+        fun mc(version: String, vararg loaders: String) {
+            for (loader in loaders) {
+                vers("$version-$loader", version)
+            }
+        }
+        // Replace individual vers calls with mc
         vers("dev", "1.21.6")
-        versions("1.21.6")
+        mc("1.21.6", "fabric", "neoforge")
         vcsVersion = "dev"
     }
     create(rootProject)
