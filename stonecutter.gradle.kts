@@ -1,8 +1,9 @@
 plugins {
     id("dev.kikugie.stonecutter")
-    id("fabric-loom") version "1.10-SNAPSHOT" apply false
+    id("dev.architectury.loom") version "1.7-SNAPSHOT" apply false
     //id("dev.kikugie.j52j") version "1.0.2" apply false // Enables asset processing by writing json5 files
     id("me.modmuss50.mod-publish-plugin") version "0.7.+" apply false // Publishes builds to hosting websites
+    id("architectury-plugin") version "3.4-SNAPSHOT" apply false
 }
 stonecutter active "dev" /* [SC] DO NOT EDIT */
 

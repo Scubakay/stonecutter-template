@@ -2,7 +2,7 @@
 
 plugins {
     `maven-publish`
-    id("fabric-loom")
+    id("dev.architectury.loom")
     //id("dev.kikugie.j52j")
     id("me.modmuss50.mod-publish-plugin")
     //id("com.github.johnrengelman.shadow") version "8.1.1"
@@ -50,11 +50,19 @@ class ModData {
     val description = property("mod.description").toString()
     val homepage = property("mod.homepage").toString()
     val repository = property("mod.repository").toString()
+    val discord = property("mod.discord").toString()
+}
 
-    val mcDep = property("mod.mc_dep").toString()
-    val title = property("mod.mc_title").toString()
-    val targets = property("mod.mc_targets").toString().split(',').map { it.trim() }
-    val publish = property("mod.publish").toString().toBoolean() && id != "template"
+class Environment {
+    val range = property("mc.range").toString()
+    val title = property("mc.title").toString()
+    val targets = property("mc.targets").toString().split(',').map { it.trim() }
+    val publish = property("mc.publish").toString().toBoolean() && property("mod.id").toString() != "template"
+
+    val loader = property("loom.platform").toString()
+    val isFabric = loader == "fabric"
+    val isForge = loader == "forge"
+    val isNeo = loader == "neoforge"
 }
 
 class ModDependencies(private val prefix: String) {
@@ -66,11 +74,12 @@ class ModDependencies(private val prefix: String) {
 }
 
 val mod = ModData()
+val env = Environment()
 val deps = ModDependencies("deps")
 val dev = ModDependencies("dev")
 val scVersion = stonecutter.current.version
 
-version = "${mod.version}+${mod.title}"
+version = "${mod.version}+${env.title}"
 group = mod.group
 base { archivesName.set(mod.id) }
 //endregion
@@ -110,12 +119,18 @@ repositories {
 dependencies {
     minecraft("com.mojang:minecraft:$scVersion")
     mappings("net.fabricmc:yarn:$scVersion+build.${deps["yarn_build"]}:v2")
-    modImplementation("net.fabricmc:fabric-loader:${deps["fabric_loader"]}")
-    if(deps.checkSpecified("fabric_api"))
-        modImplementation("net.fabricmc.fabric-api:fabric-api:${deps["fabric_api"]}")
+    if (env.isFabric) {
+        modImplementation("net.fabricmc:fabric-loader:${deps["fabric_loader"]}")
+        if(deps.checkSpecified("fabric_api"))
+            modImplementation("net.fabricmc.fabric-api:fabric-api:${deps["fabric_api"]}")
 
-    if (dev.checkSpecified("modmenu"))
-        modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
+        if (dev.checkSpecified("modmenu"))
+            modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
+    } else if (env.isNeo) {
+        // TODO: neoforge stuff
+    } else if (env.isForge) {
+        // TODO: forge stuff
+    }
 }
 
 //region Building
@@ -130,19 +145,21 @@ tasks.processResources {
     inputs.property("version", mod.version)
     inputs.property("id", mod.id)
     inputs.property("name", mod.name)
-    inputs.property("mcdep", mod.mcDep)
+    inputs.property("range", env.range)
     inputs.property("description", mod.description)
     inputs.property("homepage", mod.homepage)
     inputs.property("repository", mod.repository)
+    inputs.property("discord", mod.discord)
 
     val map = mapOf(
         "version" to mod.version,
         "id" to mod.id,
         "name" to mod.name,
-        "mcdep" to mod.mcDep,
+        "range" to env.range,
         "description" to mod.description,
         "homepage" to mod.homepage,
         "repository" to mod.repository,
+        "discord" to mod.discord,
     )
 
     filesMatching("fabric.mod.json") { expand(map) }
@@ -160,20 +177,20 @@ tasks.register<Copy>("buildAndCollect") {
 publishMods {
     file = tasks.remapJar.get().archiveFile
     additionalFiles.from(tasks.remapSourcesJar.get().archiveFile)
-    displayName = "${mod.name} ${mod.version} for ${mod.title}"
+    displayName = "${mod.name} ${mod.version} for ${env.title}"
     version = mod.version
     changelog = rootProject.file("CHANGELOG.md").readText()
     type = STABLE
     modLoaders.add("fabric")
 
-    dryRun = !mod.publish
+    dryRun = !env.publish
             || providers.environmentVariable("MODRINTH_TOKEN").getOrNull() == null
             || providers.environmentVariable("CURSEFORGE_TOKEN").getOrNull() == null
 
     modrinth {
         projectId = property("publish.modrinth").toString()
         accessToken = providers.environmentVariable("MODRINTH_TOKEN")
-        minecraftVersions.addAll(mod.targets)
+        minecraftVersions.addAll(env.targets)
         requires {
             slug = "fabric-api"
         }
