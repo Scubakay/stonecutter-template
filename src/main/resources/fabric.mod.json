@@ -15,7 +15,7 @@
   "custom": {
     "modmenu": {
       "links": {
-        "modmenu.discord": "https://discord.gg/t8AYBrmqbD"
+        "modmenu.discord": "${discord}"
       }
     }
   },
@@ -39,7 +39,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.15",
-    "minecraft": "${mcdep}",
+    "minecraft": "${range}",
     "fabric-api": "*"
   }
 }

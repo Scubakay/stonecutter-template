@@ -1,3 +1,4 @@
+import me.modmuss50.mpp.ReleaseType
 //import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
@@ -50,27 +51,39 @@ class ModData {
     val description = property("mod.description").toString()
     val homepage = property("mod.homepage").toString()
     val repository = property("mod.repository").toString()
-
-    val mcDep = property("mod.mc_dep").toString()
-    val title = property("mod.mc_title").toString()
-    val targets = property("mod.mc_targets").toString().split(',').map { it.trim() }
-    val publish = property("mod.publish").toString().toBoolean() && id != "template"
+    val discord = property("mod.discord").toString()
 }
 
-class ModDependencies(private val prefix: String) {
-    operator fun get(name: String) = property("$prefix.$name").toString()
+class Environment {
+    val range = property("mc.range").toString()
+    val title = property("mc.title").toString()
+    val targets = property("mc.targets").toString().split("\\s+".toRegex()).map { it.trim() }
+
+    val channel = ReleaseType.of(property("publish.channel").toString())
+    val dry_run = property("publish.dry_run").toString().toBoolean() || property("mod.id").toString() == "template"
+    val modrinthId = property("publish.modrinth").toString()
+    val curseforgeId = property("publish.curseforge").toString()
+}
+
+class ModDependencies() {
+    operator fun get(name: String) = property("deps.$name").toString()
     fun checkSpecified(depName: String): Boolean {
-        val property = findProperty("$prefix.$depName")
+        val property = findProperty("deps.$depName")
         return property != null && property != "[VERSIONED]"
+    }
+    fun modrinthLocalRuntime(id: String) {
+        if (deps.checkSpecified(id)) {
+            dependencies.modLocalRuntime("maven.modrinth:$id:${deps[id]}")
+        }
     }
 }
 
 val mod = ModData()
-val deps = ModDependencies("deps")
-val dev = ModDependencies("dev")
+val env = Environment()
+val deps = ModDependencies()
 val scVersion = stonecutter.current.version
 
-version = "${mod.version}+${mod.title}"
+version = "${mod.version}+${env.title}"
 group = mod.group
 base { archivesName.set(mod.id) }
 //endregion
@@ -109,13 +122,13 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:$scVersion")
-    mappings("net.fabricmc:yarn:$scVersion+build.${deps["yarn_build"]}:v2")
+    mappings("net.fabricmc:yarn:$scVersion+build.${deps["fabric_yarn"]}:v2")
     modImplementation("net.fabricmc:fabric-loader:${deps["fabric_loader"]}")
     if(deps.checkSpecified("fabric_api"))
         modImplementation("net.fabricmc.fabric-api:fabric-api:${deps["fabric_api"]}")
 
-    if (dev.checkSpecified("modmenu"))
-        modLocalRuntime("maven.modrinth:modmenu:${dev["modmenu"]}-fabric")
+    deps.modrinthLocalRuntime("fungible-updated")
+    deps.modrinthLocalRuntime("modmenu")
 }
 
 //region Building
@@ -130,19 +143,23 @@ tasks.processResources {
     inputs.property("version", mod.version)
     inputs.property("id", mod.id)
     inputs.property("name", mod.name)
-    inputs.property("mcdep", mod.mcDep)
+    inputs.property("range", env.range)
     inputs.property("description", mod.description)
     inputs.property("homepage", mod.homepage)
     inputs.property("repository", mod.repository)
+    inputs.property("discord", mod.discord)
+    inputs.property("range", env.range)
 
     val map = mapOf(
         "version" to mod.version,
         "id" to mod.id,
         "name" to mod.name,
-        "mcdep" to mod.mcDep,
+        "range" to env.range,
         "description" to mod.description,
         "homepage" to mod.homepage,
         "repository" to mod.repository,
+        "discord" to mod.discord,
+        "range" to env.range,
     )
 
     filesMatching("fabric.mod.json") { expand(map) }
@@ -160,20 +177,20 @@ tasks.register<Copy>("buildAndCollect") {
 publishMods {
     file = tasks.remapJar.get().archiveFile
     additionalFiles.from(tasks.remapSourcesJar.get().archiveFile)
-    displayName = "${mod.name} ${mod.version} for ${mod.title}"
+    displayName = "${mod.name} ${mod.version} for ${env.title}"
     version = mod.version
     changelog = rootProject.file("CHANGELOG.md").readText()
-    type = STABLE
+    type = env.channel
     modLoaders.add("fabric")
 
-    dryRun = !mod.publish
-            || providers.environmentVariable("MODRINTH_TOKEN").getOrNull() == null
-            || providers.environmentVariable("CURSEFORGE_TOKEN").getOrNull() == null
+    dryRun = env.dry_run
+            || (env.modrinthId != "..." && providers.environmentVariable("MODRINTH_TOKEN").getOrNull() == null)
+            || (env.curseforgeId != "..." && providers.environmentVariable("CURSEFORGE_TOKEN").getOrNull() == null)
 
     modrinth {
         projectId = property("publish.modrinth").toString()
         accessToken = providers.environmentVariable("MODRINTH_TOKEN")
-        minecraftVersions.addAll(mod.targets)
+        minecraftVersions.addAll(env.targets)
         requires {
             slug = "fabric-api"
         }

@@ -16,11 +16,11 @@ stonecutter {
     centralScript = "build.gradle.kts"
 
     shared {
-        vers("dev", "1.21.6")
+        vers("dev", "1.21.7")
         versions("1.21.6")
         vcsVersion = "dev"
     }
     create(rootProject)
 }
 
-rootProject.name = "Template"
+rootProject.name = "Stonecutter Template"
