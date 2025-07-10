@@ -24,3 +24,4 @@ jobs:
         uses: AndreasAugustin/actions-template-sync@v2
         with:
           source_repo_path: Scubakay/stonecutter-template
+          upstream_branch: main
