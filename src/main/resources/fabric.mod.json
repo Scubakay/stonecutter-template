@@ -22,21 +22,6 @@
   "license": "MIT",
   "icon": "assets/${id}/icon.png",
   "environment": "*",
-  "entrypoints": {
-    "main": [
-      "com.scubakay.TemplateMod"
-    ],
-    "client": [
-      "com.scubakay.TemplateModClient"
-    ]
-  },
-  "mixins": [
-    "mod.mixins.json",
-    {
-      "config": "mod.client.mixins.json",
-      "environment": "client"
-    }
-  ],
   "depends": {
     "fabricloader": ">=0.15",
     "minecraft": "${range}",

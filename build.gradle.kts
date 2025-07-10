@@ -5,6 +5,9 @@ plugins {
     `maven-publish`
     id("fabric-loom")
     //id("dev.kikugie.j52j")
+    kotlin("jvm") version "2.1.21"
+    id("com.google.devtools.ksp") version "2.1.21-2.0.2"
+    id("dev.kikugie.fletching-table.fabric") version "0.1.0-alpha.9"
     id("me.modmuss50.mod-publish-plugin")
     //id("com.github.johnrengelman.shadow") version "8.1.1"
 }
@@ -108,6 +111,15 @@ loom {
         ideConfigGenerated(true)
         vmArgs("-Dmixin.debug.export=true")
         runDir = "../../run"
+    }
+}
+
+fletchingTable {
+    mixins.create("main") {
+        default = "${mod.id}.mixins.json"
+    }
+    mixins.create("client") {
+        default = "${mod.id}.client.mixins.json"
     }
 }
 
