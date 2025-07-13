@@ -11,52 +11,25 @@ plugins {
     id("dev.kikugie.stonecutter") version "0.7-beta.3"
 }
 
+val devVersion: String = providers.gradleProperty("settings.devVersion").orNull
+    ?: error("devVersion property not found in gradle.properties")
+val versions: List<String> = providers.gradleProperty("settings.versions").orNull
+    ?.split(",")
+    ?.map { it.trim() }
+    ?: error("settings.versions property not found in gradle.properties")
+
 stonecutter {
     kotlinController = true
     centralScript = "build.gradle.kts"
 
     shared {
-        vers("dev", "1.21.7")
-        versions("1.21.6")
-        vcsVersion = "dev"
+        // Versions are declared in gradle.properties under settings.
+        vers("dev", devVersion)
+        versions(*versions.toTypedArray())
+        vcsVersion = providers.gradleProperty("settings.vcsVersion").orNull
+            ?: error("vcsVersion property not found in gradle.properties")
     }
     create(rootProject)
 }
-
-//region Git precommit hook
-gradle.beforeProject {
-    val gitDir = rootDir.resolve(".git")
-    if (gitDir.exists() && gitDir.isDirectory) {
-        val hooksDir = gitDir.resolve("hooks")
-        val preCommitHook = hooksDir.resolve("pre-commit")
-
-        if (!preCommitHook.exists()) {
-            hooksDir.mkdirs()
-            preCommitHook.writeText(
-                """
-                #!/bin/bash
-                
-                vcs_version=$(ggrep -oP 'vcsVersion\s*=\s*"\K[^"]+' settings.gradle.kts)
-                active_version=$(ggrep -oP 'stonecutter\s+active\s+"\K[^"]+' stonecutter.gradle.kts)
-                
-                echo "Detected vcsVersion: ${'$'}vcs_version"
-                echo "Detected active version: ${'$'}active_version"
-                
-                if [ "${'$'}vcs_version" != "${'$'}active_version" ]; then
-                  echo "Please run './gradlew \"Reset active project\"' to set the stonecutter branch to the version control version."
-                  exit 1
-                else
-                  echo "Versions match. No action needed."
-                fi
-                """.trimIndent()
-            )
-            preCommitHook.setExecutable(true)
-            println("Git pre-commit hook installed.")
-        }
-    } else {
-        println("Not a Git repository. Skipping hook installation.")
-    }
-}
-//endregion
 
 rootProject.name = "Stonecutter Template"
