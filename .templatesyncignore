@@ -1,6 +1,8 @@
 src/
 versions/
 
+gradle.properties
+
 README.md
 LICENSE
 CHANGELOG.md
