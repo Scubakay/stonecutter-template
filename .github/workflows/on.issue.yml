@@ -8,7 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Discord
+        if: env.DISCORD_WEBHOOK_URL != ''
         uses: discord-actions/message@v2
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         with:
           webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
           message: |
