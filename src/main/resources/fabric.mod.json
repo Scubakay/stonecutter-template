@@ -23,7 +23,7 @@
   "icon": "assets/${id}/icon.png",
   "environment": "*",
   "depends": {
-    "fabricloader": ">=0.15",
+    "fabricloader": ">=0.16",
     "minecraft": "${range}",
     "fabric-api": "*"
   }

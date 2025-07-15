@@ -60,6 +60,7 @@ class ModData {
 }
 
 class Environment {
+    val version = stonecutter.current.version
     val range = property("mc.range").toString()
     val title = property("mc.title").toString()
     val targets = property("mc.targets").toString().split("\\s+".toRegex()).map { it.trim() }
@@ -83,17 +84,16 @@ class Environment {
     val modrinthVersionedRuntime = project.properties.filter { (dep, _) -> dep.startsWith("modrinth.runtime.") }
     val modrinthVersionedImplementation = project.properties.filter { (dep, _) -> dep.startsWith("modrinth.implementation.") }
     val modrinthVersionedInclude = project.properties.filter { (dep, _) -> dep.startsWith("modrinth.include.") }
-}
 
-fun checkSpecified(depName: String): Boolean {
-    val property = findProperty(depName)
-    // Allow auto resolution if property is missing or set to [VERSIONED]
-    return property == null || property == "[VERSIONED]"
+    fun checkSpecified(depName: String): Boolean {
+        val property = findProperty(depName)
+        // Allow auto resolution if property is missing or set to [VERSIONED]
+        return property == null || property == "[VERSIONED]"
+    }
 }
 
 val mod = ModData()
 val env = Environment()
-val scVersion = stonecutter.current.version
 
 version = "${mod.version}+${env.title}"
 group = mod.group
@@ -142,8 +142,8 @@ repositories {
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:$scVersion")
-    mappings("net.fabricmc:yarn:$scVersion+build.${env.yarnBuild}:v2")
+    minecraft("com.mojang:minecraft:${env.version}")
+    mappings("net.fabricmc:yarn:${env.version}+build.${env.yarnBuild}:v2")
     if (env.isFabric) {
         modImplementation("net.fabricmc:fabric-loader:${env.fabricLoader}")
         modImplementation("net.fabricmc.fabric-api:fabric-api:${env.fabricApi}")
@@ -169,7 +169,7 @@ dependencies {
 //region Building
 java {
     withSourcesJar()
-    val java = if (stonecutter.eval(scVersion, ">=1.20.6")) JavaVersion.VERSION_21 else JavaVersion.VERSION_17
+    val java = if (stonecutter.eval(env.version, ">=1.20.6")) JavaVersion.VERSION_21 else JavaVersion.VERSION_17
     targetCompatibility = java
     sourceCompatibility = java
 }
@@ -257,7 +257,7 @@ publishing {
         create<MavenPublication>("mavenJava") {
             groupId = "${property("mod.group")}.${mod.id}"
             artifactId = mod.version
-            version = scVersion
+            version = env.version
 
             from(components["java"])
         }
