@@ -68,8 +68,8 @@ class Environment {
     val fabricLoader = property("build.fabric_loader").toString()
     val fabricApi = property("build.fabric_api").toString()
 
-    val loader = if (env.isFabric) "fabric" else "neoforge"
     val isFabric = fabricLoader != "[VERSIONED]"
+    val loader = if (isFabric) "fabric" else "neoforge"
 
     val channel = ReleaseType.of(property("publish.channel").toString())
     val dryRun = property("publish.dry_run").toString().toBoolean() || property("mod.id").toString() == "template"
