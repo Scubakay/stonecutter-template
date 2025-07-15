@@ -1,7 +1,6 @@
 import me.modmuss50.mpp.ReleaseType
 import kotlin.text.split
 import kotlin.text.trim
-
 //import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
@@ -69,6 +68,7 @@ class Environment {
     val fabricLoader = property("build.fabric_loader").toString()
     val fabricApi = property("build.fabric_api").toString()
 
+    val loader = if (env.isFabric) "fabric" else "neoforge"
     val isFabric = fabricLoader != "[VERSIONED]"
 
     val channel = ReleaseType.of(property("publish.channel").toString())
@@ -150,11 +150,11 @@ dependencies {
     }
 
     // Automated dependency resolution
-    env.modrinthRuntime.forEach { dep -> modLocalRuntime(fletchingTable.modrinth(dep, stonecutter.current.version)) }
-    env.modrinthImplementation.forEach { dep -> modImplementation(fletchingTable.modrinth(dep, stonecutter.current.version)) }
+    env.modrinthRuntime.forEach { dep -> modLocalRuntime(fletchingTable.modrinth(dep, stonecutter.current.version, env.loader)) }
+    env.modrinthImplementation.forEach { dep -> modImplementation(fletchingTable.modrinth(dep, stonecutter.current.version, env.loader)) }
     env.modrinthInclude.forEach { dep ->
-        modImplementation(fletchingTable.modrinth(dep, stonecutter.current.version))
-        include(fletchingTable.modrinth(dep, stonecutter.current.version))
+        modImplementation(fletchingTable.modrinth(dep, stonecutter.current.version, env.loader))
+        include(fletchingTable.modrinth(dep, stonecutter.current.version, env.loader))
     }
 
     // Specific versions
