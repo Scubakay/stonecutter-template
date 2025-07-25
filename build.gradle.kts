@@ -1,7 +1,7 @@
 import me.modmuss50.mpp.ReleaseType
 import kotlin.text.split
 import kotlin.text.trim
-//import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     `maven-publish`
@@ -11,40 +11,30 @@ plugins {
     id("com.google.devtools.ksp") version "2.2.0-2.0.2"
     id("dev.kikugie.fletching-table.fabric") version "0.1.0-alpha.13"
     id("me.modmuss50.mod-publish-plugin")
-    //id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "8.3.8"
 }
 
 //region Shadow libraries
 /**
  * Everything needed to shadow a library, example:
  * shadowAndRelocate("de.maxhenkel.configbuilder:configbuilder:2.0.2", "de.maxhenkel.configbuilder", "com.scubakay.autorelog.configbuilder")
- * When using: uncomment the import and plugins.id for com.github.johnrengelman.shadow
  */
-//val shadowLibrary = configurations.create("shadowLibrary") {
-//    isCanBeResolved = true
-//    isCanBeConsumed = false
-//}
-//
-//val shadowRelocations = mutableListOf<Pair<String, String>>()
-//
-//fun shadowAndRelocate(dependencyNotation: String, fromPackage: String, toPackage: String) {
-//    dependencies.add("shadowLibrary", dependencyNotation)
-//    shadowRelocations.add(fromPackage to toPackage)
-//}
-//
-//tasks.named<ShadowJar>("shadowJar") {
-//    configurations = listOf(shadowLibrary)
-//    archiveClassifier = "dev-shadow"
-//    shadowRelocations.forEach { (from, to) ->
-//        relocate(from, to)
-//    }
-//}
-//
-//tasks {
-//    remapJar {
-//        inputFile = shadowJar.get().archiveFile
-//    }
-//}
+val shadowLibrary = configurations.create("shadowLibrary") {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+tasks.named<ShadowJar>("shadowJar") {
+    configurations = listOf(shadowLibrary)
+    archiveClassifier = "dev-shadow"
+    // relocate("com.google", "com.scubakay.shadow")
+}
+
+tasks {
+    remapJar {
+        inputFile = shadowJar.get().archiveFile
+    }
+}
 //endregion
 
 //region Mod information
@@ -84,6 +74,8 @@ class Environment {
     val modrinthVersionedRuntime = project.properties.filter { (dep, _) -> dep.startsWith("modrinth.runtime.") }
     val modrinthVersionedImplementation = project.properties.filter { (dep, _) -> dep.startsWith("modrinth.implementation.") }
     val modrinthVersionedInclude = project.properties.filter { (dep, _) -> dep.startsWith("modrinth.include.") }
+
+    val shadowedLibraries = project.properties.filter { (dep, _) -> dep.startsWith("shadow.") }
 
     fun checkSpecified(depName: String): Boolean {
         val property = findProperty(depName)
@@ -163,6 +155,12 @@ dependencies {
     env.modrinthVersionedInclude.forEach { dep ->
         modImplementation("maven.modrinth:${dep.key.removePrefix("modrinth.include.")}:${property(dep.key).toString()}")
         include("maven.modrinth:${dep.key.removePrefix("modrinth.include.")}:${property(dep.key).toString()}")
+    }
+
+    // Shadowed libraries
+    env.shadowedLibraries.forEach { dep ->
+        implementation("${dep.key.removePrefix("shadow.")}:${property(dep.key).toString()}")
+        shadowLibrary("${dep.key.removePrefix("shadow.")}:${property(dep.key).toString()}")
     }
 }
 
