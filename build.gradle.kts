@@ -150,11 +150,11 @@ dependencies {
     }
 
     // Specific versions
-    env.modrinthVersionedRuntime.forEach { dep -> modLocalRuntime("maven.modrinth:${dep.key.removePrefix("modrinth.runtime.")}:${property(dep.key).toString()}") }
-    env.modrinthVersionedImplementation.forEach { dep -> modImplementation("maven.modrinth:${dep.key.removePrefix("modrinth.implementation.")}:${property(dep.key).toString()}") }
+    env.modrinthVersionedRuntime.forEach { dep -> modLocalRuntime("maven.modrinth:${dep.key.removePrefix("modrinth.runtime.")}:${property(dep.key).toString()}-${env.loader}") }
+    env.modrinthVersionedImplementation.forEach { dep -> modImplementation("maven.modrinth:${dep.key.removePrefix("modrinth.implementation.")}:${property(dep.key).toString()}-${env.loader}") }
     env.modrinthVersionedInclude.forEach { dep ->
-        modImplementation("maven.modrinth:${dep.key.removePrefix("modrinth.include.")}:${property(dep.key).toString()}")
-        include("maven.modrinth:${dep.key.removePrefix("modrinth.include.")}:${property(dep.key).toString()}")
+        modImplementation("maven.modrinth:${dep.key.removePrefix("modrinth.include.")}:${property(dep.key).toString()}-${env.loader}")
+        include("maven.modrinth:${dep.key.removePrefix("modrinth.include.")}:${property(dep.key).toString()}-${env.loader}")
     }
 
     // Shadowed libraries
